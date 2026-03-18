@@ -4,7 +4,24 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "adjusttext>=1.3.0",
+    "anndata<0.10.0",
+    "gseapy>=1.1.11",
+    "ipykernel>=7.1.0",
+    "ipywidgets>=8.1.8",
+    "jupyter>=1.1.1",
+    "numpy==1.26.4",
+    "requests>=2.32.5",
+    "scikit-learn>=1.8.0",
+    "scipy==1.13.0",
+    "sconce-scms>=0.1.2",
+    "textalloc>=1.2.1",
+    "torch>=2.10.0",
+    "tqdm-joblib>=0.0.5",
+    "widgetsnbextension>=4.0.15",
+    "wot>=1.0.8.post2",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.21,<0.10.0"]
