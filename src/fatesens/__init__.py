@@ -1,4 +1,4 @@
-from . import pp, flow_map
+from . import pp, flow_map, tl, jacobian_matrix
 
 
 import anndata

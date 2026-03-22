@@ -92,9 +92,9 @@ class WotTransportMap(TransportMap):
         days: Optional[List[int]] = None,
     ) -> csr_matrix:
         self.adata = adata
+        tmap_model_path_wot = os.path.join(tmap_model_path, "serum")
         if not os.path.exists(tmap_model_path):
             os.makedirs(tmap_model_path, exist_ok=True)
-            tmap_model_path = os.path.join(tmap_model_path, "serum")
             ot_model = wot.ot.OTModel(
                 adata, 
                 day_field=day_column_name, 
@@ -103,8 +103,8 @@ class WotTransportMap(TransportMap):
                 lambda2=50, 
                 growth_iters=3
             )
-            ot_model.compute_all_transport_maps(tmap_out=tmap_model_path)
-        tmap_model = wot.tmap.TransportMapModel.from_directory(tmap_model_path)
+            ot_model.compute_all_transport_maps(tmap_out=tmap_model_path_wot)
+        tmap_model = wot.tmap.TransportMapModel.from_directory(tmap_model_path_wot)
         
         if days is None:
             days = sorted(self.adata.obs[day_column_name].unique())
