@@ -54,6 +54,14 @@ class SensitivityEstimator:
             A -= np.dot(neg.T, neg) / (np.linalg.norm(neg @ x_t) + 1e-10)
         return 2 * jacobian.T @ A @ x_t
 
+class SingularValueEstimator:
+    def get_largest_singular_value(self, jacobian):
+        try:
+            u, s, _ = np.linalg.svd(jacobian.toarray())
+            return s[0]
+        except:
+            return 0
+
 def estimate_jacobian_of_flow_map(adata, x_0: csr_matrix, x_t: csr_matrix, days_t0: Optional[List[int]] = None, day_column_name: str = "time_info", n_neighbors=200, beta=10):
     neighbors = compute_neighbors(
         adata,
@@ -67,6 +75,26 @@ def estimate_jacobian_of_flow_map(adata, x_0: csr_matrix, x_t: csr_matrix, days_
     jacobean_estimator = JacobeanEstimator()
     args_ = [
         [x_0[neighbors[i]], x_t[neighbors[i]], JacobianType.FLOW_MAP, beta]
+        for i in range(adata_t0.shape[0])
+    ]
+
+    all_jacobians = parallelize_function(jacobean_estimator.get_jacobian, args_)
+    jacobian = all_jacobians
+    return jacobian
+
+def estimate_jacobian_of_fate_probability(adata, x_0: csr_matrix, x_t_probability: csr_matrix, days_t0: Optional[List[int]] = None, day_column_name: str = "time_info", n_neighbors=200, beta=10):
+    neighbors = compute_neighbors(
+        adata,
+        days_t0=days_t0,
+        day_column_name=day_column_name,
+        n_neighbors=n_neighbors,
+    )
+
+    indices_day_t0 = adata.obs[day_column_name].isin(days_t0)
+    adata_t0 = adata[indices_day_t0]
+    jacobean_estimator = JacobeanEstimator()
+    args_ = [
+        [x_0[neighbors[i]], x_t_probability[neighbors[i]], JacobianType.FATE_PROBABILITY, beta]
         for i in range(adata_t0.shape[0])
     ]
 
@@ -88,3 +116,22 @@ def estimate_sensitivity(adata, all_jacobians, x_t, positives: np.array, negativ
     ]
     sensitivity = parallelize_function(sensitivity_estimator.estimate, args_)
     return np.array(sensitivity)
+
+def compute_largest_singular_values(jacobians):
+    """
+    Compute the largest singular value for each jacobian matrix in parallel.
+    
+    Parameters
+    ----------
+    jacobians : list
+        List of jacobian matrices (sparse csr_matrix format).
+    
+    Returns
+    -------
+    np.ndarray
+        Array of largest singular values.
+    """
+    singular_value_estimator = SingularValueEstimator()
+    args_ = [[jacobian] for jacobian in jacobians]
+    sing_vals = parallelize_function(singular_value_estimator.get_largest_singular_value, args_)
+    return np.log10(np.array(sing_vals)+10**-10)
