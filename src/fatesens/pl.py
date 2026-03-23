@@ -4,6 +4,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 import adjustText as ta
+from typing import List, Tuple, Optional
 
 try:
     import textalloc as textalloc_lib
@@ -478,7 +479,7 @@ def plot_ridge_on_ftle(
     adata,
     ridge_indices,
     ftle,
-    day_t0,
+    day_t0: Optional[List[int]] = [2, 4],
     state_key="state_info",
     state_value="Undifferentiated",
     time_key="time_info",

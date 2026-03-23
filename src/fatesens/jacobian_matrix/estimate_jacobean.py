@@ -134,4 +134,4 @@ def compute_largest_singular_values(jacobians):
     singular_value_estimator = SingularValueEstimator()
     args_ = [[jacobian] for jacobian in jacobians]
     sing_vals = parallelize_function(singular_value_estimator.get_largest_singular_value, args_)
-    return np.log10(np.array(sing_vals)+10**-10)
+    return np.array(sing_vals)
