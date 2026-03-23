@@ -7,6 +7,7 @@ from scipy import stats
 from scipy.sparse import csr_matrix
 from collections import defaultdict
 from statsmodels.stats.multitest import multipletests
+from sklearn.neighbors import NearestNeighbors
 import wot
 import os
 
@@ -104,6 +105,113 @@ def calculate_sensitivity_scores_stats(adata: ad.AnnData, sensitivities: np.arra
     })
     
     return results_df
+
+
+def orientation_test_from_ridge_indices(
+    adata: ad.AnnData,
+    ridge_indices,
+    day_t0: Optional[List[int]] = [2, 4],
+    time_key: str = "time_info",
+    emb_key: str = "X_emb",
+    output_obs_key: str = "orientation_cluster",
+    ridge_label: str = "Ridge",
+    k: int = 15,
+    fill_value: str = "NA",
+):
+    """
+    Run the orientation test using ridge indices and write clusters to adata.obs.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix with embedding coordinates.
+    ridge_indices : list of array-like
+        Ridge cell indices from estimate_ridge (list of cell index arrays).
+    day_t0 : list of int or None
+        If provided, only these time points are considered.
+    time_key : str
+        Column in adata.obs for time information.
+    emb_key : str
+        Key in adata.obsm for embedding coordinates.
+    output_obs_key : str
+        Column name to store orientation cluster labels.
+    ridge_label : str
+        Label assigned to ridge cells.
+    k : int
+        Look-ahead window for the macro-direction.
+    fill_value : str
+        Label for cells excluded by day_t0 filtering.
+    """
+    if not ridge_indices or len(ridge_indices[0]) == 0:
+        raise ValueError("ridge_indices must contain at least one non-empty index array.")
+
+    if day_t0 is not None:
+        adata_filtered = adata[adata.obs[time_key].isin(day_t0)].copy()
+    else:
+        adata_filtered = adata
+
+    ridge_adata_all_obs = set(ridge_indices[0].tolist())
+    is_ridge = adata_filtered.obs.index.isin(ridge_adata_all_obs)
+    coords = adata_filtered.obsm[emb_key]
+
+    ridge_coords = coords[is_ridge]
+    spot_coords = coords[~is_ridge]
+    if ridge_coords.shape[0] < 2:
+        raise ValueError("Need at least 2 ridge points to compute orientation.")
+    if spot_coords.shape[0] == 0:
+        raise ValueError("No non-ridge points found for orientation testing.")
+
+    # Sort boundary points via greedy walk
+    distances_to_origin = np.linalg.norm(ridge_coords, axis=1)
+    start_idx = np.argmax(distances_to_origin)
+    unvisited = list(range(len(ridge_coords)))
+    sorted_indices = []
+    curr_idx = start_idx
+    while unvisited:
+        unvisited.remove(curr_idx)
+        sorted_indices.append(curr_idx)
+        if not unvisited:
+            break
+        remaining_coords = ridge_coords[unvisited]
+        dists = np.linalg.norm(remaining_coords - ridge_coords[curr_idx], axis=1)
+        next_local_idx = np.argmin(dists)
+        curr_idx = unvisited[next_local_idx]
+    sorted_ridge = ridge_coords[sorted_indices]
+
+    # Orientation test
+    R_sorted = sorted_ridge
+    S = spot_coords
+    n = len(R_sorted)
+    nn_sorted = NearestNeighbors(n_neighbors=1).fit(R_sorted)
+    _, b1_indices = nn_sorted.kneighbors(S)
+    i_array = b1_indices.flatten()
+    B1 = R_sorted[i_array]
+
+    if n <= k:
+        i_start = np.zeros_like(i_array)
+        i_end = np.full_like(i_array, n - 1)
+    else:
+        i_start = np.minimum(i_array, n - k)
+        i_start = np.maximum(0, i_start)
+        i_end = np.minimum(i_array + k, n - 1)
+
+    V = R_sorted[i_end] - R_sorted[i_start]
+    U = S - B1
+    d = (U[:, 0] * V[:, 1]) - (U[:, 1] * V[:, 0])
+    cluster_labels = np.where(d > 0, "Cluster 1", "Cluster 2")
+
+    obs_clustering = np.array([ridge_label] * len(adata_filtered), dtype=object)
+    obs_clustering[~is_ridge] = cluster_labels
+
+    if adata_filtered is adata:
+        adata.obs[output_obs_key] = pd.Categorical(obs_clustering)
+    else:
+        full_labels = np.full(adata.n_obs, fill_value, dtype=object)
+        mask = adata.obs_names.isin(adata_filtered.obs_names)
+        full_labels[mask] = obs_clustering
+        adata.obs[output_obs_key] = pd.Categorical(full_labels)
+
+    return adata
 
 
 def get_2_type_of_clonal_trajectory(
