@@ -472,3 +472,101 @@ def plot_iou_concordance(gene_lists, method_names, reference_method_idx=0, figsi
     
     plt.tight_layout()
     plt.show()
+
+
+def plot_ridge_on_ftle(
+    adata,
+    ridge_indices,
+    ftle,
+    day_t0,
+    state_key="state_info",
+    state_value="Undifferentiated",
+    time_key="time_info",
+    background_cmap="Reds",
+    ridge_color="Green",
+    background_s=5,
+    ridge_s=5,
+):
+    """
+    Plot ridge cells on top of FTLE (Finite-Time Lyapunov Exponent) background.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix with obsm["X_emb"] containing coordinates.
+    ridge_indices : list of array-like
+        Ridge cell indices from estimate_ridge (list of cell index arrays).
+    ftle : array-like of shape (n_cells,)
+        FTLE values for coloring the background.
+    day_t0 : tuple or list
+        Time points to filter (e.g., [2, 4]).
+    state_key : str, default="state_info"
+        Column name in adata.obs for cell state.
+    state_value : str, default="Undifferentiated"
+        State value to highlight on ridge.
+    time_key : str, default="time_info"
+        Column name in adata.obs for time/day information.
+    background_cmap : str, default="Reds"
+        Colormap for FTLE background.
+    ridge_color : str, default="Green"
+        Color for ridge cells.
+    background_s : int, default=5
+        Marker size for background cells.
+    ridge_s : int, default=5
+        Marker size for ridge cells.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        Figure object.
+    ax : matplotlib.axes.Axes
+        Axes object.
+    """
+    time_values = day_t0
+
+    # Filter cells by time
+    adata_filtered = adata[adata.obs[time_key].isin(time_values)]
+
+    # Get ridge cells
+    ridge_adata_all_obs = ridge_indices[0].tolist()
+    adata_on_ridge = adata_filtered[adata_filtered.obs.index.isin(ridge_adata_all_obs)].copy()
+
+    # Create figure
+    fig, ax = plt.subplots()
+
+    # Plot FTLE background
+    scatter_bg = ax.scatter(
+        adata_filtered.obsm["X_emb"][:, 0],
+        adata_filtered.obsm["X_emb"][:, 1],
+        c=ftle,
+        cmap=background_cmap,
+        s=background_s,
+        alpha=0.7,
+        zorder=1,
+    )
+    cbar = plt.colorbar(scatter_bg, ax=ax)
+    cbar.set_label("Largest Singular Value of Jacobian", fontsize=10)
+
+    # Plot ridge cells with specific state
+    ridge_state_filtered = adata_on_ridge[
+        adata_on_ridge.obs[state_key].isin([state_value])
+    ]
+    if len(ridge_state_filtered) > 0:
+        ax.scatter(
+            ridge_state_filtered.obsm["X_emb"][:, 0],
+            ridge_state_filtered.obsm["X_emb"][:, 1],
+            color=ridge_color,
+            s=ridge_s,
+            alpha=0.9,
+            zorder=2,
+            label=state_value,
+        )
+
+    ax.set_xlabel("Embedding Dim 1", fontsize=11)
+    ax.set_ylabel("Embedding Dim 2", fontsize=11)
+    ax.legend(loc="best", frameon=True, fontsize=10)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+    plt.show()
