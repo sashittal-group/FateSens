@@ -4,7 +4,7 @@ A sensitivity-based computational framework for analyzing gene regulatory dynami
 
 ## Overview
 
-![Overview Figure](figures/overview1_cropped.pdf)
+![Overview Figure](figures/overview1_cropped.png)
 
 ## Abstract
 
