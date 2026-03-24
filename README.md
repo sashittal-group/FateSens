@@ -38,3 +38,9 @@ import fatesens as fs
 See the [tutorial](tutorial) folder for examples on how to use FateSens, including:
 - `fate_boundary_estimation.ipynb`
 - `regulatory_gene_estimation.ipynb`
+
+## Data
+
+The data used for this analysis can be found at (LARRY data on neutrophil-monocyte trajectory): https://doi.org/10.6084/m9.figshare.31846435
+
+**Note:** The tutorial uses a subsampled dataset (20% of cells) for quick demonstration, which takes approximately 2-3 minutes to run. For full dataset analysis, comment out the subsampling step. Full dataset processing takes approximately 20-30 minutes on a single core.
