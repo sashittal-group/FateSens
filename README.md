@@ -16,13 +16,20 @@ FateSens introduces a sensitivity-based computational framework for analyzing ge
 
 ## Setup
 
-Create a virtual environment using uv:
+Either, create a virtual environment and install using uv:
 
 ```bash
+git clone git@github.com:sashittal-group/FateSens.git
 pip install uv
 uv venv --python 3.12
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv sync
+```
+
+or, install from pypi
+
+```bash
+pip install fatesens # for compability make sure you have python 3.12
 ```
 
 ## Usage
@@ -43,4 +50,4 @@ See the [tutorial](tutorial) folder for examples on how to use FateSens, includi
 
 The data used for this analysis can be found at (LARRY data on neutrophil-monocyte trajectory): https://doi.org/10.6084/m9.figshare.31846435
 
-**Note:** The tutorial uses a subsampled dataset (20% of cells) for quick demonstration, which takes approximately 2-3 minutes to run. For full dataset analysis, comment out the subsampling step. Full dataset processing takes approximately 20-30 minutes on a single core.
+**Note:** The tutorial uses a subsampled dataset (20% of cells) for quick demonstration, which takes approximately 2-3 minutes to run. For full dataset analysis, comment out 1. the subsampling step 2. increase n_neighbor_for_jacobian, I recommend 200. Full dataset processing takes approximately 20-30 minutes on a single core.
